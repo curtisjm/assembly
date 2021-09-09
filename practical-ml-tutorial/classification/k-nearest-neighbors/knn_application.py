@@ -17,41 +17,51 @@ def k_nearest_neighbors(data, predict, k=3):
 
     votes = [i[1] for i in sorted(distances)[:k]]
     vote_result = Counter(votes).most_common(1)[0][0]
+    confidence = Counter(votes).most_common(1)[0][1] / k
 
-    return vote_result
+    return vote_result, confidence
 
 
-df = pd.read_csv("data/breast-cancer-wisconsin.data")
-df.replace("?", -99999, inplace=True)
-df.drop(columns="id", axis=1, inplace=True)
+accuracies = []
 
-# convert data to a list of lists
-full_data = df.astype(float).values.tolist()
-random.shuffle(full_data)
+# test predictions 25 times
+for i in range(25):
+    df = pd.read_csv("data/breast-cancer-wisconsin.data")
+    df.replace("?", -99999, inplace=True)
+    df.drop(columns="id", axis=1, inplace=True)
 
-test_size = 0.2
-train_set = {2: [], 4: []}
-test_set = {2: [], 4: []}
-# train with first 20% of data
-train_data = full_data[: -int(test_size * len(full_data))]
-# test with last 20% of data
-test_data = full_data[-int(test_size * len(full_data)) :]
+    # convert data to a list of lists
+    full_data = df.astype(float).values.tolist()
+    random.shuffle(full_data)
 
-for i in train_data:
-    # last column of lists is class column, append up until then
-    train_set[i[-1]].append(i[:-1])
+    test_size = 0.2
+    train_set = {2: [], 4: []}
+    test_set = {2: [], 4: []}
+    # train with first 20% of data
+    train_data = full_data[: -int(test_size * len(full_data))]
+    # test with last 20% of data
+    test_data = full_data[-int(test_size * len(full_data)) :]
 
-for i in test_data:
-    test_set[i[-1]].append(i[:-1])
+    for i in train_data:
+        # last column of lists is class column, append up until then
+        train_set[i[-1]].append(i[:-1])
 
-correct = 0
-total = 0
+    for i in test_data:
+        test_set[i[-1]].append(i[:-1])
 
-for group in test_set:
-    for data in test_set[group]:
-        vote = k_nearest_neighbors(train_set, data, k=5)
-        if group == vote:
-            correct += 1
-        total += 1
+    correct = 0
+    total = 0
 
-print("Accuracy: ", correct / total)
+    for group in test_set:
+        for data in test_set[group]:
+            vote, confidence = k_nearest_neighbors(train_set, data, k=5)
+            if group == vote:
+                correct += 1
+            # else:
+            #     print(f"Incorrect vote ({vote}), confidence: {confidence}")
+            total += 1
+
+    # print("Accuracy: ", correct / total)
+    accuracies.append(correct / total)
+
+print(sum(accuracies) / len(accuracies))
